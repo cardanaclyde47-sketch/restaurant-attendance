@@ -1,10 +1,4 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
+window.firebaseConfig = {
   apiKey: "AIzaSyAloCEFwBOsDAZ5vXxSxCLpHTc_f7NdJWs",
   authDomain: "restaurant-attendance-a1cd2.firebaseapp.com",
   projectId: "restaurant-attendance-a1cd2",
@@ -13,5 +7,18 @@ const firebaseConfig = {
   appId: "1:794903663053:web:63c9734212424bcad5b484"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+window.APP_CONFIG = {
+  restaurantName: "Restaurant Attendance",
+  kioskCode: "RESTO123",
+  qrSeconds: 30,
+  demoAdmin: {
+    name: "Admin Owner",
+    email: "admin@restaurant.local",
+    password: "admin123"
+  },
+  demoEmployee: {
+    name: "Juan Employee",
+    email: "juan@restaurant.local",
+    password: "employee123"
+  }
+};
