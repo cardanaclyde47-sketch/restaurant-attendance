@@ -1,0 +1,106 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Admin Dashboard</title><link rel="stylesheet" href="assets/styles.css"></head><body>
+<div class="topbar"><div class="brand" data-brand>Attendance</div><div class="nav"><span id="who"></span><a href="admin.html">Dashboard</a><a href="kiosk-login.html">Kiosk</a><button onclick="DB.logout()">Logout</button></div></div>
+<div class="container"><div class="grid"><div class="card"><h3>Today</h3><div id="todayDate" class="muted"></div></div><div class="card"><h3>Records Today</h3><div id="todayCount" class="stat">0</div></div><div class="card"><h3>Mode</h3><span class="pill" data-mode></span></div></div>
+<div class="grid-2"><div class="card"><h2>Add Employee</h2><div id="empMsg" class="notice hidden"></div><form id="empForm"><label>Name</label><input id="empName" placeholder="Employee name" required><label>Email</label><input id="empEmail" type="email" placeholder="employee@email.com" required><label>Password</label><input id="empPass" placeholder="temporary password" required><button class="btn full" style="margin-top:16px">Add Employee</button></form></div><div class="card"><h2>Employees</h2><p class="muted">Select employees using the checkboxes, then choose Deactivate, Reactivate, or Delete. Deactivate keeps old attendance records.</p><div class="bulk-actions"><label class="checkline"><input type="checkbox" id="selectAllEmployees"> Select all employees</label><div class="bulk-buttons"><button class="btn secondary" id="bulkDeactivate" type="button">Deactivate Selected</button><button class="btn secondary" id="bulkReactivate" type="button">Reactivate Selected</button><button class="btn danger" id="bulkDelete" type="button">Delete Selected</button></div><div id="selectedCount" class="tiny">0 selected</div></div><div id="employees"></div></div></div>
+<div class="card"><h2>Attendance Records</h2><label>Date</label><input id="dateFilter" type="date"><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Email</th><th>Time In</th><th>Time Out</th><th>Total Hours</th></tr></thead><tbody id="recordsBody"></tbody></table></div><div id="recordsMobile" class="mobile-list"></div></div></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script><script src="assets/config.js"></script><script src="assets/data.js"></script><script src="assets/app.js"></script><script>
+let adminUser;
+
+function selectedEmployeeIds(){
+  return Array.from(document.querySelectorAll('.employee-check:checked')).map(cb=>cb.value);
+}
+function updateSelectedCount(){
+  const checked = selectedEmployeeIds().length;
+  const all = document.querySelectorAll('.employee-check').length;
+  setText('selectedCount', checked + ' selected');
+  const selectAll = document.getElementById('selectAllEmployees');
+  if(selectAll){
+    selectAll.checked = all > 0 && checked === all;
+    selectAll.indeterminate = checked > 0 && checked < all;
+  }
+}
+function clearSelection(){
+  document.querySelectorAll('.employee-check').forEach(cb=>cb.checked=false);
+  updateSelectedCount();
+}
+
+async function selectedUsersOrWarn(){
+  const ids = selectedEmployeeIds();
+  if(!ids.length){ msg('empMsg','Please select at least one employee first.','warn'); return []; }
+  const users = await DB.getUsers();
+  return users.filter(u=>ids.includes(u.id) && u.role !== 'admin');
+}
+
+async function deactivateEmployee(id, name){
+  if(!confirm('Deactivate '+name+'?\n\nThey will not be able to login, but old attendance records will stay.')) return;
+  try{ await DB.setUserActive(id, false); msg('empMsg', name+' deactivated.','ok'); render(); }catch(err){ msg('empMsg', err.message, 'err'); }
+}
+async function reactivateEmployee(id, name){
+  if(!confirm('Reactivate '+name+'?')) return;
+  try{ await DB.setUserActive(id, true); msg('empMsg', name+' reactivated.','ok'); render(); }catch(err){ msg('empMsg', err.message, 'err'); }
+}
+async function deleteEmployee(id, name){
+  if(!confirm('Delete '+name+' permanently?\n\nUse this only if you added the employee by mistake. Old attendance records will remain in the reports, but this account will be removed from the employee list.')) return;
+  if(!confirm('Final warning: Are you sure you want to delete '+name+'?')) return;
+  try{ await DB.deleteUser(id); msg('empMsg', name+' deleted.','ok'); render(); }catch(err){ msg('empMsg', err.message, 'err'); }
+}
+
+async function bulkSetActive(active){
+  try{
+    const users = await selectedUsersOrWarn();
+    if(!users.length) return;
+    const action = active ? 'reactivate' : 'deactivate';
+    if(!confirm('Are you sure you want to '+action+' '+users.length+' selected employee(s)?')) return;
+    for(const u of users){ await DB.setUserActive(u.id, active); }
+    msg('empMsg', users.length+' employee(s) '+(active?'reactivated':'deactivated')+'.','ok');
+    render();
+  }catch(err){ msg('empMsg', err.message, 'err'); }
+}
+async function bulkDeleteEmployees(){
+  try{
+    const users = await selectedUsersOrWarn();
+    if(!users.length) return;
+    const names = users.map(u=>u.name).join(', ');
+    if(!confirm('Delete '+users.length+' selected employee(s)?\n\n'+names+'\n\nUse this only for employees added by mistake.')) return;
+    if(!confirm('Final warning: this will remove the selected employee account(s) from the employee list. Continue?')) return;
+    for(const u of users){ await DB.deleteUser(u.id); }
+    msg('empMsg', users.length+' employee(s) deleted.','ok');
+    render();
+  }catch(err){ msg('empMsg', err.message, 'err'); }
+}
+
+async function render(){
+  setText('todayDate', DB.formatDate(DB.today()));
+  const users=await DB.getUsers();
+  document.getElementById('employees').innerHTML = users.map(u=>{
+    const isAdmin = u.role === 'admin';
+    const status = u.active === false ? '<span class="status-inactive">Inactive</span>' : '<span class="status-active">Active</span>';
+    const safeName = escapeHtml(u.name);
+    const safeId = escapeHtml(u.id);
+    const safeNameForJs = safeName.replace(/'/g,'&#39;');
+    const selectBox = isAdmin ? '<div class="employee-select-spacer"></div>' : `<label class="employee-select"><input class="employee-check" type="checkbox" value="${safeId}" onchange="updateSelectedCount()"><span>Select</span></label>`;
+    const actionButtons = isAdmin ? '<p class="tiny">Admin account cannot be selected or removed here.</p>' : `<div class="employee-actions">${u.active===false ? `<button class="btn secondary" onclick="reactivateEmployee('${safeId}','${safeNameForJs}')">Reactivate</button>` : `<button class="btn secondary" onclick="deactivateEmployee('${safeId}','${safeNameForJs}')">Deactivate</button>`}<button class="btn danger" onclick="deleteEmployee('${safeId}','${safeNameForJs}')">Delete</button></div>`;
+    return `<div class="record-card employee-card">${selectBox}<div class="employee-main"><strong>${safeName}</strong><span class="muted">${escapeHtml(u.email)} • ${escapeHtml(u.role)} • ${status}</span>${actionButtons}</div></div>`;
+  }).join('');
+  updateSelectedCount();
+  const date=document.getElementById('dateFilter').value || DB.today();
+  const recs=await DB.getAttendance(date);
+  if(date===DB.today()) setText('todayCount', recs.length);
+  const rows = recs.map(r=>`<tr><td>${escapeHtml(r.employeeName)}</td><td>${escapeHtml(r.employeeEmail)}</td><td>${DB.toTime(r.timeIn)||'-'}</td><td>${DB.toTime(r.timeOut)||'-'}</td><td>${DB.totalHours(r.timeIn,r.timeOut)||'-'}</td></tr>`).join('');
+  recordsBody.innerHTML = rows || `<tr><td colspan="5">No records for this date.</td></tr>`;
+  recordsMobile.innerHTML = recs.map(r=>`<div class="record-card"><strong>${escapeHtml(r.employeeName)}</strong><span class="muted">${escapeHtml(r.employeeEmail)}</span><div class="record-meta"><span>In: ${DB.toTime(r.timeIn)||'-'}</span><span>Out: ${DB.toTime(r.timeOut)||'-'}</span><span>Hours: ${DB.totalHours(r.timeIn,r.timeOut)||'-'}</span><span>Date: ${escapeHtml(r.date)}</span></div></div>`).join('') || '<p class="muted">No records for this date.</p>';
+}
+boot().then(async()=>{
+  adminUser=DB.requireRole('admin');
+  if(!adminUser) return;
+  setText('who', adminUser.name+' (admin)');
+  dateFilter.value=DB.today();
+  dateFilter.addEventListener('change', render);
+  selectAllEmployees.addEventListener('change', e=>{ document.querySelectorAll('.employee-check').forEach(cb=>cb.checked=e.target.checked); updateSelectedCount(); });
+  bulkDeactivate.addEventListener('click', ()=>bulkSetActive(false));
+  bulkReactivate.addEventListener('click', ()=>bulkSetActive(true));
+  bulkDelete.addEventListener('click', bulkDeleteEmployees);
+  empForm.addEventListener('submit', async e=>{e.preventDefault(); try{await DB.saveUser({name:empName.value,email:empEmail.value,password:empPass.value,role:'employee',active:true}); empForm.reset(); msg('empMsg', DB.mode().includes('Firebase') ? 'Employee added. They can login from other devices.' : 'Employee added in this browser only. Connect Firebase to share with employee phones.','ok'); render();}catch(err){msg('empMsg',err.message,'err')}});
+  render();
+});
+</script></body></html>
