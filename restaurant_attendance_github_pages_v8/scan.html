@@ -1,9 +1,144 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Scan QR</title><link rel="stylesheet" href="assets/styles.css"></head><body>
-<div class="topbar"><div class="brand" data-brand>Attendance</div><div class="nav"><a href="employee.html">Back</a><button onclick="DB.logout()">Logout</button></div></div>
-<div class="container narrow"><div class="card"><div id="badge" class="mode-badge">Scan QR</div><h1 class="android-title">Point your camera at the restaurant QR</h1><p class="muted">Press Start Camera. Allow camera access if Android asks.</p><div id="scanMsg" class="notice hidden"></div><button id="startBtn" class="btn full">Start Camera</button><div class="scan-frame" style="margin-top:16px"><div id="reader"></div></div><details style="margin-top:16px"><summary class="muted">Camera not working?</summary><p class="muted">Use Chrome, allow camera permission, or paste the QR token/link below for testing.</p><label>Paste QR link or token</label><input id="manualToken" placeholder="Paste token or QR URL"><button id="manualBtn" class="btn full" style="margin-top:10px">Submit QR</button></details></div></div>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><script src="assets/config.js"></script><script src="assets/data.js"></script><script src="assets/app.js"></script><script>
-let html5QrCode=null, done=false;
-function extractToken(text){ try{ const u=new URL(text); return u.searchParams.get('token') || text; }catch(e){ return String(text||'').trim(); } }
-async function submitToken(text){ if(done) return; done=true; try{ const token=extractToken(text); const rec=await DB.recordAttendance(DB.currentUser(), param('action'), token); msg('scanMsg', (param('action')==='time_in'?'Time In':'Time Out')+' saved successfully.','ok'); setTimeout(()=>location.href='employee.html',1200); }catch(err){ done=false; msg('scanMsg', err.message, 'err'); } }
-boot().then(()=>{const u=DB.requireRole('employee'); if(!u) return; const action=param('action')==='time_out'?'time_out':'time_in'; const badge=document.getElementById('badge'); badge.textContent=action==='time_in'?'TIME IN':'TIME OUT'; badge.className='mode-badge '+(action==='time_in'?'in':'out'); startBtn.addEventListener('click', async()=>{try{startBtn.disabled=true; startBtn.textContent='Camera starting...'; html5QrCode=new Html5Qrcode('reader'); await html5QrCode.start({facingMode:'environment'}, {fps:10, qrbox:{width:260,height:260}}, submitToken, ()=>{}); startBtn.textContent='Scanning...'; msg('scanMsg','Camera is active. Scan the kiosk QR.','ok');}catch(err){startBtn.disabled=false; startBtn.textContent='Start Camera'; msg('scanMsg','Camera failed: '+err.message,'err');}}); manualBtn.addEventListener('click',()=>submitToken(manualToken.value));});
-</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scan Demo QR</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" data-brand>Restaurant Attendance Demo</div>
+    <nav class="nav">
+      <a href="employee.html">Back</a>
+      <button type="button" onclick="DB.logout()">Exit Demo</button>
+    </nav>
+  </header>
+
+  <main class="container narrow">
+    <section class="card">
+      <div id="badge" class="mode-badge">Scan QR</div>
+      <h1 class="android-title">Point your camera at the kiosk QR</h1>
+      <p class="muted">Start the camera and allow permission when your browser asks.</p>
+
+      <div id="scanMsg" class="notice hidden" role="status"></div>
+      <button id="startBtn" class="btn full" type="button">Start Camera</button>
+
+      <div class="scan-frame" style="margin-top: 16px;">
+        <div id="reader"></div>
+      </div>
+
+      <details style="margin-top: 16px;">
+        <summary class="muted">Camera not working?</summary>
+        <p class="muted">Paste the full demo QR link below. A raw token works only in the same browser as the kiosk.</p>
+        <label for="manualToken">QR link or token</label>
+        <input id="manualToken" placeholder="Paste the QR link or token">
+        <button id="manualBtn" class="btn full" type="button" style="margin-top: 10px;">Submit QR</button>
+      </details>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/data.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    let scanner = null;
+    let finished = false;
+
+    function extractQrData(value) {
+      const text = String(value || '').trim();
+
+      try {
+        const url = new URL(text, location.href);
+        const token = url.searchParams.get('token');
+        if (token) {
+          return {
+            token,
+            expiresAt: url.searchParams.get('expires')
+          };
+        }
+      } catch (error) {
+        // A raw token is allowed for same-browser testing.
+      }
+
+      return { token: text, expiresAt: null };
+    }
+
+    async function submitQr(value) {
+      if (finished) return;
+      finished = true;
+
+      try {
+        const qr = extractQrData(value);
+        const action = param('action') === 'time_out' ? 'time_out' : 'time_in';
+        await DB.recordAttendance(DB.currentUser(), action, qr.token, qr.expiresAt);
+
+        if (scanner) {
+          try {
+            await scanner.stop();
+          } catch (error) {
+            // The camera may already be stopped.
+          }
+        }
+
+        msg(
+          'scanMsg',
+          (action === 'time_in' ? 'Time In' : 'Time Out') + ' saved in this browser demo.',
+          'ok'
+        );
+        setTimeout(() => {
+          location.href = 'employee.html';
+        }, 1200);
+      } catch (error) {
+        finished = false;
+        msg('scanMsg', error.message, 'err');
+      }
+    }
+
+    boot().then(() => {
+      const user = DB.requireRole('employee');
+      if (!user) return;
+
+      const action = param('action') === 'time_out' ? 'time_out' : 'time_in';
+      const badge = document.getElementById('badge');
+      badge.textContent = action === 'time_in' ? 'TIME IN' : 'TIME OUT';
+      badge.className = 'mode-badge ' + (action === 'time_in' ? 'in' : 'out');
+
+      document.getElementById('startBtn').addEventListener('click', async () => {
+        const button = document.getElementById('startBtn');
+
+        try {
+          if (typeof Html5Qrcode === 'undefined') {
+            throw new Error('The camera scanner library could not load.');
+          }
+
+          button.disabled = true;
+          button.textContent = 'Camera starting…';
+          scanner = new Html5Qrcode('reader');
+
+          await scanner.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: { width: 260, height: 260 } },
+            submitQr,
+            () => {}
+          );
+
+          button.textContent = 'Scanning…';
+          msg('scanMsg', 'Camera is active. Scan the latest kiosk QR.', 'ok');
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = 'Start Camera';
+          msg('scanMsg', 'Camera failed: ' + error.message, 'err');
+        }
+      });
+
+      document.getElementById('manualBtn').addEventListener('click', () => {
+        submitQr(document.getElementById('manualToken').value);
+      });
+
+      if (param('token')) submitQr(location.href);
+    });
+  </script>
+</body>
+</html>

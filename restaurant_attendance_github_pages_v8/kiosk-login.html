@@ -1,3 +1,37 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Kiosk Login</title><link rel="stylesheet" href="assets/styles.css"></head><body>
-<div class="container narrow"><div class="card"><h1>Restaurant Laptop QR Display</h1><p class="muted">Enter kiosk code to open QR display.</p><div id="alert" class="notice hidden"></div><form id="kioskForm"><label>Kiosk Code</label><input id="code" type="password" value="RESTO123"><button class="btn full" style="margin-top:16px">Open QR Display</button></form><p class="tiny">Default code: RESTO123</p></div></div>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script><script src="assets/config.js"></script><script src="assets/data.js"></script><script src="assets/app.js"></script><script>boot().then(()=>{kioskForm.addEventListener('submit',e=>{e.preventDefault(); if(code.value===window.APP_CONFIG.kioskCode){localStorage.setItem('kioskOk','1'); location.href='kiosk.html';}else msg('alert','Wrong kiosk code.','err');});});</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Open Demo Kiosk</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="container narrow">
+    <section class="card">
+      <span class="pill" data-mode></span>
+      <h1>Restaurant QR Kiosk</h1>
+      <p class="muted">Open the kiosk screen to generate rotating QR codes for this portfolio demo.</p>
+
+      <div class="notice">
+        The kiosk does not connect to a restaurant database. Its QR codes expire quickly and are used only for local demonstration.
+      </div>
+
+      <button id="openKiosk" class="btn full" type="button">Open Demo Kiosk</button>
+      <a href="index.html" style="display: inline-block; margin-top: 16px;">Back to demo home</a>
+    </section>
+  </main>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/data.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    boot().then(() => {
+      document.getElementById('openKiosk').addEventListener('click', () => {
+        localStorage.setItem('kioskOk', '1');
+        location.href = 'kiosk.html';
+      });
+    });
+  </script>
+</body>
+</html>

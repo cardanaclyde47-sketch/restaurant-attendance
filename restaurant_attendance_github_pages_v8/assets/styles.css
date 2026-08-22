@@ -31,3 +31,16 @@ input,select{width:100%;font:inherit;padding:14px 15px;border:1px solid #cbd5e1;
 
 .bulk-actions{border:1px solid var(--border);background:#f8fafc;border-radius:18px;padding:14px;margin:14px 0 16px}.checkline{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-weight:800}.checkline input{width:20px;height:20px;accent-color:var(--primary)}.bulk-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.bulk-buttons .btn{min-height:42px;padding:10px 12px;font-size:14px}.employee-card{display:flex;gap:12px;align-items:flex-start}.employee-main{flex:1;min-width:0}.employee-select{display:flex;flex-direction:column;align-items:center;gap:4px;margin:2px 0 0;font-size:12px;color:var(--muted);font-weight:800;min-width:58px}.employee-select input{width:24px;height:24px;accent-color:var(--primary)}.employee-select-spacer{width:58px;flex:0 0 58px}
 @media(max-width:520px){.bulk-buttons{display:grid;grid-template-columns:1fr}.bulk-buttons .btn{width:100%}.employee-card{gap:10px}.employee-select{min-width:52px}.employee-select-spacer{width:52px;flex-basis:52px}}
+
+
+/* Accessibility and demo-state refinements */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
+}
+.btn.secondary:hover { background: #cbd5e1; }
+.btn.danger:hover { background: #b91c1c; }
+details summary { cursor: pointer; }
