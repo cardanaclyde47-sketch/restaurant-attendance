@@ -1,3 +1,52 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Attendance App</title><link rel="stylesheet" href="assets/styles.css"></head><body>
-<div class="container narrow center"><div class="card"><h1 data-brand>Attendance</h1><p class="muted">Choose where to go.</p><div class="home-links" style="grid-template-columns:1fr"><a class="home-link" href="login.html"><h3>Admin / Employee Login</h3><p class="muted">Open dashboard or employee scanner.</p></a><a class="home-link" href="kiosk-login.html"><h3>Restaurant Laptop QR Display</h3><p class="muted">Open the kiosk QR screen.</p></a></div><p class="tiny" data-mode></p></div></div>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script><script src="assets/config.js"></script><script src="assets/data.js"></script><script src="assets/app.js"></script><script>boot();</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A browser-only restaurant attendance portfolio demo.">
+  <title>Restaurant Attendance Demo</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="container narrow center">
+    <section class="card">
+      <span class="pill" data-mode></span>
+      <h1 data-brand>Restaurant Attendance Demo</h1>
+      <p class="muted">Explore an attendance workflow for administrators, employees, and a QR kiosk.</p>
+
+      <div class="notice">
+        <strong>Portfolio demo:</strong> Nothing is sent to an online database. Every record stays in this browser and is safe to reset.
+      </div>
+
+      <div class="home-links" style="grid-template-columns: 1fr;">
+        <a class="home-link" href="login.html">
+          <h3>Explore the dashboards</h3>
+          <p class="muted">Open the administrator or employee experience without an account.</p>
+        </a>
+        <a class="home-link" href="kiosk-login.html">
+          <h3>Open the QR kiosk</h3>
+          <p class="muted">Generate short-lived QR codes for the attendance demo.</p>
+        </a>
+      </div>
+
+      <button id="resetDemo" class="btn secondary full" type="button" style="margin-top: 16px;">
+        Reset browser demo
+      </button>
+      <p class="tiny">Do not enter real employee or personal information.</p>
+    </section>
+  </main>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/data.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    boot().then(() => {
+      document.getElementById('resetDemo').addEventListener('click', () => {
+        if (confirm('Reset all demo employees and attendance records in this browser?')) {
+          DB.resetDemo();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
